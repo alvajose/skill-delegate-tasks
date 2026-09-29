@@ -87,10 +87,18 @@ This is the install the scripts read from (`~/.claude/plugins/cache/ponytail/`).
 
 ## Install
 
-Put this folder where your harness reads skills, for example:
+With the [`skills`](https://github.com/vercel-labs/skills) CLI, globally for Claude Code:
 
 ```bash
-git clone <this repo> ~/.claude/skills/delegate-tasks     # Claude Code, and OpenCode reads it too
+npx skills add alvajose/skill-delegate-tasks -g -a claude-code
+```
+
+Use `-a opencode` (or both, `-a claude-code -a opencode`) for OpenCode. It installs the whole folder, scripts included. The two required skills below are separate installs.
+
+Or clone it where your harness reads skills:
+
+```bash
+git clone https://github.com/alvajose/skill-delegate-tasks.git ~/.claude/skills/delegate-tasks
 ```
 
 Optionally make your own copy of the settings (it works without: the scripts fall back to the example):
@@ -115,6 +123,8 @@ Every model and effort is a variable. `models.env.example` holds the defaults; c
 | `MAX_LOOPS`                     | maximum implement passes per task                                               |
 | `IMPL_TIMEOUT`                  | seconds before a hung worker or fix actor is killed (1800); the pass counts as failed|
 | `JUDGE_TIMEOUT`, `REPORT_TIMEOUT`| seconds per judge attempt (900) and per report through opencode (600)           |
+| `MAX_WORKERS`, `MAX_JUDGES`      | OpenCode implementers/fixers (3) and judges (2) at once; more wait in line      |
+| `MAX_AGENTS`                     | all OpenCode agents at once (4), to bound RAM                                   |
 
 Models are `provider/model` ids from `opencode models`. Effort is OpenCode's `--variant`: `max` means the highest variant the model offers, and the scripts translate it because the names differ per model (`low/high/max`, `low/medium/xhigh`, `none/thinking`...).
 

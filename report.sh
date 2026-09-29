@@ -17,12 +17,16 @@ findings() { # findings <judge-file>: one line per finding of the judge's JSON, 
   [ -s "$1" ] || { echo "  (not run or file removed)"; return; }
   node -e '
 const t = require("fs").readFileSync(process.argv[1], "utf8");
+// models sometimes leave a trailing comma ("},]"): accept that one slip, nothing looser
+const parseLoose = (x) => { try { return JSON.parse(x); } catch (e) { return JSON.parse(x.replace(/,(s*[]}])/g, "$1")); } };
+// ...or stop right before the final closing brace(s): close only what is still open, never invent content
+const closeOpen = (x) => { let d = 0, s = false, e = false; for (const c of x) { if (s) { if (e) e = false; else if (c === "\\") e = true; else if (c === "\"") s = false; } else if (c === "\"") s = true; else if (c === "{") d++; else if (c === "}") d--; } return s || d <= 0 ? x : x + "}".repeat(d); };
 for (let k = t.indexOf("\"findings\""); k >= 0; k = t.indexOf("\"findings\"", k + 1)) {
   const i = t.lastIndexOf("{", k); let d = 0, s = false, e = false, j = i;
   for (; j < t.length; j++) { const c = t[j];
     if (s) { if (e) e = false; else if (c === "\\") e = true; else if (c === "\"") s = false; }
     else if (c === "\"") s = true; else if (c === "{") d++; else if (c === "}" && --d === 0) break; }
-  try { const r = JSON.parse(t.slice(i, j + 1));
+  try { const r = parseLoose(closeOpen(t.slice(i, j + 1)));
     if (!r.findings.length) { console.log("  clean: no findings"); process.exit(0); }
     for (const f of r.findings) console.log("  - [" + f.severity + "] " + f.location + " (" + f.causal_disposition + "): " + f.claim);
     process.exit(0); } catch (x) {}
@@ -42,7 +46,7 @@ console.log("  NO VALID RESULT (the judge returned no usable JSON)");' "$1"
     echo; echo "Judge 1:"; findings "$wt.judge1.txt"; echo "Judge 2:"; findings "$wt.judge2.txt"
     if [ -d "$wt" ]; then
       base=$(wt_base "$wt"); cur=$(wt_tree "$wt")
-      merged=no; git branch --merged 2>/dev/null | grep -qx "[* ] *track/$t" && merged=yes
+      merged=no; git merge-base --is-ancestor "track/$t" HEAD 2>/dev/null && merged=yes
       echo; echo "Branch track/$t merged into the current branch: $merged. Uncommitted changes live in the worktree."
       echo "Files changed by this task:"; echo '```'; git -C "$wt" diff --stat "$base" "$cur"; echo '```'
       echo "Patch (unified, 12 lines of context; it shows the final code of what changed):"; echo '```diff'

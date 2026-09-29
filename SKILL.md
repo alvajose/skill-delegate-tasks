@@ -97,6 +97,8 @@ bash <skill-dir>/delegate.sh <task> <brief-file> "<done-command>"
 
 For example, when the project's tests truncate the database they use, give each task its own database: create it under a per-task name, pass its URL through the environment variable the tests read, and register the command that drops it. How to do that is specific to each project, so it is not part of this skill.
 
+**Concurrency caps (RAM).** The scripts themselves cap how many OpenCode agents run at once, from `models.env`: `MAX_WORKERS` implementers and fix actors (default 3), `MAX_JUDGES` judges (default 2), and `MAX_AGENTS` all of them together (default 4). A script over a cap prints `waiting for a free ... slot` and waits in line until one frees up (`slots.sh`). So launch every task and judge that is ready as soon as it is ready: the queue, not you, enforces the caps. A queued script holds no worktree and runs no model while it waits.
+
 **Launching workers:** start `delegate.sh` and `judge.sh` each as its own background task of your harness (in Claude Code: a Bash call with `run_in_background: true`; if your harness has no background tasks, run them in the background of the shell and poll their output) with a name like `OpenCode <task>: <goal in a few words>` (judges: `Judge 1 <task>` and `Judge 2 <task>`, one call each). That makes each worker show up in the harness's background-task list with a readable name, and you are notified when it finishes; do not use a subagent for this. The scripts print one progress line per pass, so the task's output shows what it is doing; read it instead of the JSON log.
 
 ## Phase 3 - Judge (as each task finishes)

@@ -5,11 +5,12 @@
 # judgment-day skill, verbatim (see real.sh). The judge can read files and use read-only lookup tools; shell and edits are denied.
 # Result: <repo>-wt/<task>.judge<N>.txt containing the judge's JSON ({"findings":[...],"evidence":[...]}).
 set -euo pipefail
-here=$(cd "$(dirname "$0")" && pwd); source "$here/models.sh"; source "$here/real.sh"
+here=$(cd "$(dirname "$0")" && pwd); source "$here/models.sh"; source "$here/real.sh"; source "$here/slots.sh"
 task=${1:?task}; brief=${2:?brief file}; n=${3:?judge number 1 or 2}
 case $n in 1) letter=A; agent=jd-judge-a; model=${JUDGE1_MODEL:?set JUDGE1_MODEL};; 2) letter=B; agent=jd-judge-b; model=${JUDGE2_MODEL:?set JUDGE2_MODEL};; *) die "judge number must be 1 or 2";; esac
 root=$(git rev-parse --show-toplevel); wt="$root-wt/$task"; out="$wt.judge$n.txt"
 [ -d "$wt" ] || die "no worktree: $wt"
+acquire_slot judge "$task judge $n"   # waits in line while MAX_JUDGES / MAX_AGENTS are busy (slots.sh)
 
 # immutable target: the worktree's full change (tracked diff + new files) as a patch inside the worktree, read-only
 patch="$wt/.review-patch-$n"; cp "$brief" "$wt/.review-brief-$n.md"
@@ -53,12 +54,16 @@ $prompt" --dir "$wt" -m "$model" ${EFFORT_ARGS[@]+"${EFFORT_ARGS[@]}"} >"$out" 2
 # summary of the judge's JSON; exit 4 when there is none
 summarize() { node -e '
 const t = require("fs").readFileSync(process.argv[1], "utf8");
+// models sometimes leave a trailing comma ("},]"): accept that one slip, nothing looser
+const parseLoose = (x) => { try { return JSON.parse(x); } catch (e) { return JSON.parse(x.replace(/,(s*[]}])/g, "$1")); } };
+// ...or stop right before the final closing brace(s): close only what is still open, never invent content
+const closeOpen = (x) => { let d = 0, s = false, e = false; for (const c of x) { if (s) { if (e) e = false; else if (c === "\\") e = true; else if (c === "\"") s = false; } else if (c === "\"") s = true; else if (c === "{") d++; else if (c === "}") d--; } return s || d <= 0 ? x : x + "}".repeat(d); };
 for (const m of t.matchAll(/\{\s*"findings"/g)) { const i = m.index;
   let d = 0, s = false, e = false, j = i;
   for (; j < t.length; j++) { const c = t[j];
     if (s) { if (e) e = false; else if (c === "\\") e = true; else if (c === "\"") s = false; }
     else if (c === "\"") s = true; else if (c === "{") d++; else if (c === "}" && --d === 0) break; }
-  try { const r = JSON.parse(t.slice(i, j + 1)); const by = {};
+  try { const r = parseLoose(closeOpen(t.slice(i, j + 1))); const by = {};
     for (const f of r.findings) by[f.severity] = (by[f.severity] || 0) + 1;
     console.log(r.findings.length ? "findings: " + JSON.stringify(by) : "clean (no findings)"); process.exit(0); } catch (x) {}
 }

@@ -7,10 +7,11 @@
 # order), applied as uncommitted edits; that state is recorded in <wt>.base.tree so the task's own change stays separable.
 # Exit 0 = done command passed, 2 = gave up after MAX_LOOPS. Changes stay uncommitted.
 set -euo pipefail
-here=$(cd "$(dirname "$0")" && pwd); source "$here/models.sh"; source "$here/real.sh"
+here=$(cd "$(dirname "$0")" && pwd); source "$here/models.sh"; source "$here/real.sh"; source "$here/slots.sh"
 task=${1:?task}; brief=${2:?brief file}; donecmd=${3:?done command}
 root=$(git rev-parse --show-toplevel); wt="$root-wt/$task"; log="$wt.log"
 [ -e "$wt" ] && { echo "worktree already exists: $wt" >&2; exit 1; }
+acquire_slot worker "$task"   # waits in line while MAX_WORKERS / MAX_AGENTS are busy (slots.sh)
 git worktree add -q -b "track/$task" "$wt" HEAD
 # resources this task will create outside the worktree (databases, temp dirs...): cleanup.sh runs these lines at the very end
 [ -z "${DELEGATE_CLEANUP:-}" ] || echo "$DELEGATE_CLEANUP" >>"$wt.cleanup"

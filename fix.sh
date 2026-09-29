@@ -4,9 +4,10 @@
 # findings the orchestrator confirmed, using FIX_MODEL. It first snapshots the tree (<repo>-wt/<task>.prefix.tree) so that the
 # scoped re-judgment sees only the fix delta, as the skill requires. Then the orchestrator reruns the done command and both judges.
 set -euo pipefail
-here=$(cd "$(dirname "$0")" && pwd); source "$here/models.sh"; source "$here/real.sh"
+here=$(cd "$(dirname "$0")" && pwd); source "$here/models.sh"; source "$here/real.sh"; source "$here/slots.sh"
 task=${1:?task}; findings=${2:?confirmed findings file}
 root=$(git rev-parse --show-toplevel); wt="$root-wt/$task"; [ -d "$wt" ] || die "no worktree: $wt"
+acquire_slot worker "$task fix"
 
 prompt=$(ref_block "## Fix Actor Prompt")
 prompt=${prompt//'{table}'/"$(cat "$findings")"}

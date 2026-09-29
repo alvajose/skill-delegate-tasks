@@ -22,8 +22,11 @@ rm -f "$wt".log "$wt".fix.log "$wt".prefix.tree "$wt".base.tree "$wt".result "$w
 branch="track/$task"
 if [ -d "$wt" ]; then
   dirty=$(git -C "$wt" status --porcelain 2>/dev/null)
-  if [ -n "$discard" ] || { git branch --merged | grep -qx "[* ] *$branch" && [ -z "$dirty" ]; }; then
-    git worktree remove --force "$wt" && git branch -D "$branch" -q 2>/dev/null
+  if [ -n "$discard" ] || { git merge-base --is-ancestor "$branch" HEAD 2>/dev/null && [ -z "$dirty" ]; }; then
+    git worktree remove --force "$wt" 2>/dev/null || { rm -rf "$wt" && git worktree prune; }   # a killed run can leave files git will not delete
+    if [ -d "$wt" ]; then echo "[$task] could NOT remove the worktree $wt" >&2; exit 3; fi
+    git branch -D "$branch" -q 2>/dev/null || true
+    if git rev-parse -q --verify "$branch" >/dev/null; then echo "[$task] could NOT delete branch $branch" >&2; exit 3; fi
     echo "[$task] removed worktree and branch"
   else
     echo "[$task] KEPT worktree and branch: not merged or has uncommitted work (use --discard only if the user said to drop it)" >&2
