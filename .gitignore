@@ -1,0 +1,18 @@
+# project-specific helper (per-task test databases for one private project); not part of the skill
+helpers/
+
+# run leftovers, if a script is ever run from inside this folder
+*.log
+*.bak
+*.attempt1
+*.result
+*.prefix.tree
+*.base.tree
+.review-*
+
+# editor and OS
+.DS_Store
+Thumbs.db
+
+# your own model choices
+models.env

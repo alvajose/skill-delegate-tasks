@@ -1,0 +1,4 @@
+# the scripts run under bash: they must keep LF line endings even when checked out on Windows
+*.sh text eol=lf
+*.env text eol=lf
+*.md text eol=lf
