@@ -16,7 +16,7 @@ effort_args "$FIX_MODEL" "${FIX_EFFORT:-}"
 wt_tree "$wt" >"$wt.prefix.tree"
 echo "[$task] fix actor: ${FIX_MODEL:-default model}"
 # --auto approves permissions: acceptable only because --dir pins the agent to this worktree
-opencode run "$(agent_body jd-fix-agent)
+timeout "${IMPL_TIMEOUT:-1800}" opencode run "$(agent_body jd-fix-agent)
 
 $prompt" --dir "$wt" --auto --format json ${margs[@]+"${margs[@]}"} ${EFFORT_ARGS[@]+"${EFFORT_ARGS[@]}"} >>"$wt.fix.log" 2>&1 || echo "fix actor exited with code $?" >>"$wt.fix.log"
 git -C "$wt" status --short

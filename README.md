@@ -20,12 +20,12 @@ All models, including the blind judges, can be mentioned explicitly in the promp
 | 1. Plan      | The orchestrator grounds itself in the project (its docs, plus whatever code-intelligence, memory or documentation tools are available or you name), designs the plan with the ponytail skill, splits it into subtasks with `depends_on`, and waits for your approval. |
 | 2. Implement | One worktree and branch per task. Independent tasks run in parallel; a dependent task starts when its predecessors finish, on top of their changes. A worker loops until the task's _done command_ passes.                                                             |
 | 3. Judge     | As each task finishes, two blind judges (the real judgment-day agents) review its own change. Each judge is its own background task.                                                                                                                                   |
-| 4. Fix       | Only severe findings confirmed by both judges are fixed, by the real fix actor, at most two rounds.                                                                                                                                                                    |
+| 4. Fix       | Only severe findings confirmed by both judges are fixed, by the real fix actor, at most two rounds, without asking you: the approved plan is the criterion. If the judges contradict each other, the orchestrator rules on it from the evidence and only escalates to you what it cannot settle. |
 | 5. Integrate | Only when you ask: commit each branch and merge one at a time, in dependency order.                                                                                                                                                                                    |
 | 6. Report    | `report.sh` builds a fact packet from files and one headless call turns it into the report.                                                                                                                                                                            |
 | 7. Clean up  | Temporary databases, logs and merged worktrees are removed. Unmerged work is kept.                                                                                                                                                                                     |
 
-Nothing is committed, merged or pushed unless you ask for it.
+Nothing is committed, merged or pushed unless you ask for it. After you approve the plan, the run only stops for you on a contradiction the orchestrator cannot settle, on findings still severe after two fix rounds, and for integration.
 
 ## Requirements
 
@@ -109,6 +109,8 @@ Every model and effort is a variable. `models.env.example` holds the defaults; c
 | `JUDGE2_MODEL`, `JUDGE2_EFFORT` | judge 2 (`jd-judge-b`); use a different model family than judge 1               |
 | `REPORT_MODEL`, `REPORT_EFFORT` | the final report (default `claude-sonnet-5-5`, `medium`)                        |
 | `MAX_LOOPS`                     | maximum implement passes per task                                               |
+| `IMPL_TIMEOUT`                  | seconds before a hung worker or fix actor is killed (1800); the pass counts as failed|
+| `JUDGE_TIMEOUT`, `REPORT_TIMEOUT`| seconds per judge attempt (900) and per report through opencode (600)           |
 
 Models are `provider/model` ids from `opencode models`. Effort is OpenCode's `--variant`: `max` means the highest variant the model offers, and the scripts translate it because the names differ per model (`low/high/max`, `low/medium/xhigh`, `none/thinking`...).
 

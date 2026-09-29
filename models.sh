@@ -1,7 +1,9 @@
 # Sourced by the other scripts. Loads models.env; variables already set in the environment win.
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 cfg="$here/models.env"; [ -f "$cfg" ] || cfg="$here/models.env.example"   # models.env is the user's own copy
-while IFS='=' read -r k v; do
+cr=$(printf '\r')
+while IFS='=' read -r k v || [ -n "$k" ]; do
+  k=${k%"$cr"}; v=${v%"$cr"}   # tolerate a CRLF copy of the file (Windows checkouts)
   case $k in ''|\#*) continue;; esac
   v=${v%%#*}; v=$(echo $v)   # strip trailing comment and whitespace
   [ -z "${!k+x}" ] && export "$k=$v"

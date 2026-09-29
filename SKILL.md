@@ -90,7 +90,10 @@ For example, when the project's tests truncate the database they use, give each 
 
 ## Phase 3 - Judge (as each task finishes)
 
-Judging is the real **judgment-day** skill, not something approximated here: invoke it (Skill tool, `judgment-day`) and follow it exactly, including its decision gates (both judges confirm = confirmed; one judge = suspect, no auto-fix; contradiction = escalate to the user; ask the user before the round-one correction unless they already said to go ahead), its two-round budget, and its terminal verdicts `APPROVED | ESCALATED`. The scripts only launch the actors with the skill's own texts: `jd-judge-a` / `jd-judge-b` and the skill's judge prompt, verbatim (`real.sh` reads them at run time; if a source is missing the script stops, there is no fallback).
+Judging is the real **judgment-day** skill, not something approximated here: invoke it (Skill tool, `judgment-day`) and follow it exactly (both judges confirm = confirmed; one judge = suspect, no auto-fix; its two-round budget; its terminal verdicts `APPROVED | ESCALATED`), with **two deliberate overrides of its human gates**, because this skill runs unattended once the plan is approved:
+
+- **No approval before the correction.** The user's approval of the plan is the authorization and the plan is the criterion: a confirmed severe finding is one that breaks the task's goal, its done command, its allowed files, or a rule in the project's own docs. Fix confirmed severe findings automatically, without asking.
+- **Contradictions go to the orchestrator first.** When the judges contradict each other (one reports a severe defect that the other's evidence contradicts, or they disagree on the same location), decide it yourself: read the code at the cited location, check both judges' proofs, run the done command or a focused check. Rule by the plan and the evidence and record the ruling and why in the ledger: a real defect becomes confirmed (fix it), a false one is dropped. Escalate to the user **only** if the evidence does not settle it, stating the question, both positions and what you checked. The scripts only launch the actors with the skill's own texts: `jd-judge-a` / `jd-judge-b` and the skill's judge prompt, verbatim (`real.sh` reads them at run time; if a source is missing the script stops, there is no fallback).
 
 The moment a task's notification says it is done (exit 0), launch its two judges; **do not wait for the other tasks**. Each judge is its own background call, so each shows up in the background-task list:
 
@@ -99,17 +102,17 @@ bash <skill-dir>/judge.sh <task> <brief-file> 1     # description: Judge 1 <task
 bash <skill-dir>/judge.sh <task> <brief-file> 2     # description: Judge 2 <task>   (jd-judge-b, JUDGE2_MODEL)
 ```
 
-Judges are blind (no shared context). Free-tier models (`opencode/*-free`) are refused as judges because their shell cannot be denied (`ALLOW_FREE_JUDGE=1` overrides that knowingly); `judge.sh` retries a judge once when it returns no valid JSON. Shell, edits and writes are denied to them, as in the real definition, which only lets them read and search; they may use any read-only lookup tool their OpenCode has. Each writes `<repo>-wt/<task>.judge<N>.txt` and the script prints a one-line summary of the judge's JSON (`{"findings":[...],"evidence":[...]}`, severities BLOCKER|CRITICAL|WARNING|SUGGESTION). Exit 4 / "NO RESULT" means the judge returned no valid JSON: that is not a clean result. Rerun that judge once; if it still returns none, report the task as unresolved. A task that gave up (exit 2) is not judged; report it.
+Judges are blind (no shared context). Free-tier models (`opencode/*-free`) are refused as judges because their shell cannot be denied (`ALLOW_FREE_JUDGE=1` overrides that knowingly); `judge.sh` retries a judge once when it returns no valid JSON. Shell, edits and writes are denied to them, as in the real definition, which only lets them read and search; they may use any read-only lookup tool their OpenCode has. Each writes `<repo>-wt/<task>.judge<N>.txt` and the script prints a one-line summary of the judge's JSON (`{"findings":[...],"evidence":[...]}`, severities BLOCKER|CRITICAL|WARNING|SUGGESTION). Exit 4 / "NO RESULT" means the judge returned no valid JSON even after `judge.sh`'s own retry: that is not a clean result; report the task as unresolved. A task that gave up (exit 2) is not judged; report it.
 
 ## Phase 4 - Fix and re-judge
 
-Merge the two judge results into the ledger as the judgment-day skill says. Only severe findings confirmed by **both** judges are fixed. Put exactly those rows in a file and run the real fix actor (`jd-fix-agent` definition plus the skill's fix prompt, verbatim):
+Merge the two judge results into the ledger as the judgment-day skill says. Only severe findings confirmed by **both** judges, or ruled real by you on a contradiction, are fixed; do not ask the user first (see Phase 3). Put exactly those rows in a file and run the real fix actor (`jd-fix-agent` definition plus the skill's fix prompt, verbatim):
 
 ```bash
 bash <skill-dir>/fix.sh <task> <confirmed-findings-file>
 ```
 
-Then run the task's done command yourself in the worktree. For the scoped re-judgment, append the frozen ledger to the task's brief file and rerun both judges (`judge.sh`): because `fix.sh` left a snapshot, they see only the frozen ledger and the fix delta, as the skill requires. **At most two fix rounds and two re-judgments per task.** Anything still severe after round two is ESCALATED to the user; there is no third round.
+Then run the task's done command yourself in the worktree. For the scoped re-judgment, append the frozen ledger to the task's brief file and rerun both judges (`judge.sh`): because `fix.sh` left a snapshot, they see only the frozen ledger and the fix delta, as the skill requires. **At most two fix rounds and two re-judgments per task.** Anything still severe after round two is ESCALATED to the user; there is no third round. Apart from the plan approval and integration, this escalation and an unresolvable contradiction are the only points where the run waits for the user.
 
 ## Phase 5 - Review and integrate
 

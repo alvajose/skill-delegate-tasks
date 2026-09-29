@@ -26,8 +26,9 @@ fi
 run() { # run <model> <prompt> [extra opencode args...]
   local m=$1 p=$2; shift 2; local margs=(); [ -n "$m" ] && margs=(-m "$m")
   # --auto approves permissions: acceptable only because --dir pins the agent to this worktree
-  opencode run "$p" --dir "$wt" --auto --format json ${margs[@]+"${margs[@]}"} "$@" >>"$log" 2>&1 \
-    || echo "opencode exited with code $?" >>"$log"
+  # a hung or looping worker is killed after IMPL_TIMEOUT seconds; the pass then counts as failed and the loop goes on
+  timeout "${IMPL_TIMEOUT:-1800}" opencode run "$p" --dir "$wt" --auto --format json ${margs[@]+"${margs[@]}"} "$@" >>"$log" 2>&1 \
+    || { rc=$?; echo "opencode exited with code $rc"; [ "$rc" = 124 ] && echo "worker killed after ${IMPL_TIMEOUT:-1800}s (IMPL_TIMEOUT)"; } | tee -a "$log" >&2
 }
 
 effort_args "$IMPL_MODEL" "${IMPL_EFFORT:-}"; IMPL_EA=(${EFFORT_ARGS[@]+"${EFFORT_ARGS[@]}"})
