@@ -39,6 +39,10 @@ Nothing is committed, merged or pushed unless you ask for it. After you approve 
 
 ### Installing the two required skills
 
+> **Both are 100% required.** delegate-tasks is built on them: the judges are judgment-day's own agents and prompts, and the implementers follow ponytail's own rules. Install the real ones.
+>
+> Only as a last resort, `vendor/` ships **clones** of both (MIT, pinned to the commit recorded in `vendor/*/SOURCE`). They are used only when the installed skill is not found, which is checked again on every run, and every use prints `WARNING using the BUNDLED CLONE` and is stated in the final report. A clone does not get updates and may be older than the real skill.
+
 **ponytail** ([repository](https://github.com/DietrichGebert/ponytail)). In Claude Code, as two separate prompts:
 
 ```text

@@ -1,0 +1,3 @@
+Copied from https://github.com/Gentleman-Programming/gentle-ai at commit d96a5d4f021b09d048958b518f550e1d8d629700 (MIT, see LICENSE),
+from internal/assets/skills/judgment-day and internal/assets/claude/agents (model placeholder filled with sonnet, effort line removed).
+Fallback only: used when the real judgment-day skill and jd-* agents are not installed.

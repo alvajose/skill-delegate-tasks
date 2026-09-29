@@ -33,6 +33,7 @@ console.log("  NO VALID RESULT (the judge returned no usable JSON)");' "$1"
 {
   echo "# Run packet"
   echo; echo "## The request (as the user wrote it; answer in this language)"; echo; cat "$req"
+  echo; echo "## Skill sources (checked now): $(skill_sources)"
   echo; echo "## Configured judges: 1 = ${JUDGE1_MODEL:-?} (effort ${JUDGE1_EFFORT:-default}), 2 = ${JUDGE2_MODEL:-?} (effort ${JUDGE2_EFFORT:-default})"
   for t in "$@"; do
     wt="$root-wt/$t"; echo; echo "## Task $t"
@@ -53,7 +54,7 @@ console.log("  NO VALID RESULT (the judge returned no usable JSON)");' "$1"
   done
 } >"$packet"
 
-SYS="You write the final report of a multi-task engineering run for the person who requested it. Use ONLY the packet you receive: never invent files, behaviour or results; anything the packet does not show, say it was not verified. Write in the language of the request. Structure: 1) Result, at most 3 lines: what was asked, what was done, overall state (done, judged, integrated?). 2) One short section per task: what changed in plain words (files, behaviour before and after), the evidence (done command and its outcome, judge findings with severity; a judge with no valid result is not a pass), open items. 3) How the result looks: the essential final code of the changed parts, quoted from the patch's added and context lines with file names, brief. 4) Not verified and risks. 5) State: worktrees, branches, integration. Be concise, no filler, no praise."
+SYS="You write the final report of a multi-task engineering run for the person who requested it. Use ONLY the packet you receive: never invent files, behaviour or results; anything the packet does not show, say it was not verified. Write in the language of the request. Structure: 1) Result, at most 3 lines: what was asked, what was done, overall state (done, judged, integrated?). 2) One short section per task: what changed in plain words (files, behaviour before and after), the evidence (done command and its outcome, judge findings with severity; a judge with no valid result is not a pass), open items. 3) How the result looks: the essential final code of the changed parts, quoted from the patch's added and context lines with file names, brief. 4) Not verified and risks. 5) State: worktrees, branches, integration. If the skill sources say BUNDLED CLONE for any skill, say so at the top of the report: the run used a bundled copy, not the installed skill, and the user should install it. Be concise, no filler, no praise."
 
 echo "[report] $REPORT_MODEL effort=${REPORT_EFFORT:-default} packet=$(wc -c <"$packet") chars" >&2
 if [[ $REPORT_MODEL == */* ]]; then

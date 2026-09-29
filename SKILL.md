@@ -1,6 +1,6 @@
 ---
 name: delegate-tasks
-description: Orchestrate a piece of work from whatever model invoked this skill: plan it grounded in the project (its docs plus whatever code-intelligence, memory or documentation tools are available or the user names), delegate each task to a headless OpenCode worker in its own git worktree, loop each worker until an exact done-command passes, run two blind judges per task as it finishes, and get a final report from a cheap model. Invoke as "/delegate-tasks <what to do>".
+description: 'Orchestrate a piece of work from whatever model invoked this skill: plan it grounded in the project (its docs plus whatever code-intelligence, memory or documentation tools are available or the user names), delegate each task to a headless OpenCode worker in its own git worktree, loop each worker until an exact done-command passes, run two blind judges per task as it finishes, and get a final report from a cheap model. Invoke as "/delegate-tasks <what to do>".'
 ---
 
 # Delegate tasks
@@ -8,6 +8,17 @@ description: Orchestrate a piece of work from whatever model invoked this skill:
 You are the orchestrator: **the model that was invoked with this skill, in whatever harness and subscription you are running** (Claude Code, OpenCode, Codex, ...). You plan, review, and integrate; you do not need to be a specific model. OpenCode agents implement; two more judge; you plan, review, and integrate. The text after `/delegate-tasks` is the request.
 
 `<skill-dir>` below is the directory this SKILL.md was loaded from.
+
+## Required skills, and the bundled clones
+
+**judgment-day** and **ponytail** are required: this skill is built on them and uses their real text. Install them (see the README).
+`vendor/` holds MIT-licensed **clones** of both (their files are named `SKILL.clone.md` on purpose, so no skill loader or installer mistakes them for real skills), only so the skill still works where they are not installed. At the start of **every** run, check for the installed ones first:
+
+- **ponytail:** load it with your harness's skill tool (in Claude Code, `ponytail:ponytail` and `ponytail:ponytail-review`). If it cannot be loaded, read `<skill-dir>/vendor/ponytail/skills/ponytail/SKILL.clone.md` (and `.../ponytail-review/SKILL.clone.md`) and follow it as written.
+- **judgment-day:** load it with your skill tool (`judgment-day`). If it cannot be loaded, read `<skill-dir>/vendor/judgment-day/skills/judgment-day/SKILL.clone.md` and its `references/`.
+- The scripts do the same on their own for the texts they pass to workers and judges: installed first, clone only as a fallback, with a `WARNING using the BUNDLED CLONE` line in their output.
+
+Whenever a clone is used, **tell the user plainly before launching and again in the report**: "using the bundled clone of <skill>, not the installed one; it may be older than the current version, install it for the real one". A clone is a fallback, never the ideal.
 
 ## Models per phase (all configurable)
 
@@ -46,7 +57,7 @@ Before writing any plan, ground yourself in the project. Do not plan from the re
 2. **Memory:** if a memory tool is available (engram or another) or the user named one, search it for this project: past decisions, conventions, bugs already fixed, rejected approaches. Do not re-propose what was rejected.
 3. **Project intent:** read every `.md` that records business logic, philosophy, vision, and main ideas (`AGENTS.md`, `CLAUDE.md`, `README`, `docs/`, architecture notes). The plan must fit that vision, not fight it.
 4. **Libraries:** for any library the plan depends on, use a documentation tool if one is available (context7 or another) or the user named one; otherwise check the installed version's own docs and source. Do not rely on memory for APIs.
-5. **Design the plan with the real ponytail skill.** Invoke it (Skill tool, `ponytail:ponytail`) and apply it as written, to every candidate task; drop or shrink tasks accordingly and say what you dropped. Do not work from a summary of it. If the skill cannot be loaded, stop and tell the user.
+5. **Design the plan with the real ponytail skill.** Invoke it (Skill tool, `ponytail:ponytail`) and apply it as written, to every candidate task; drop or shrink tasks accordingly and say what you dropped. Do not work from a summary of it. If it cannot be loaded, use the bundled clone and tell the user (see "Required skills").
 6. **Write the plan.** For each task: id, goal in one or two sentences, why it serves the project's vision, allowed files (prefer disjoint sets; two tasks may edit the same file only when they change different regions or functions, and then the plan says so and fixes the integration order), the "done" command that must pass, `depends_on` (ids of the tasks whose result it needs, empty if none), and a risk note. Add a short "dropped by ponytail" list and the order in which branches will be integrated.
 7. **Show the plan to the user and wait for approval** before launching anything, unless the request says to skip confirmation.
 
@@ -90,10 +101,10 @@ For example, when the project's tests truncate the database they use, give each 
 
 ## Phase 3 - Judge (as each task finishes)
 
-Judging is the real **judgment-day** skill, not something approximated here: invoke it (Skill tool, `judgment-day`) and follow it exactly (both judges confirm = confirmed; one judge = suspect, no auto-fix; its two-round budget; its terminal verdicts `APPROVED | ESCALATED`), with **two deliberate overrides of its human gates**, because this skill runs unattended once the plan is approved:
+Judging is the real **judgment-day** skill, not something approximated here: invoke it (Skill tool, `judgment-day`; its bundled clone only if it is not installed) and follow it exactly (both judges confirm = confirmed; one judge = suspect, no auto-fix; its two-round budget; its terminal verdicts `APPROVED | ESCALATED`), with **two deliberate overrides of its human gates**, because this skill runs unattended once the plan is approved:
 
 - **No approval before the correction.** The user's approval of the plan is the authorization and the plan is the criterion: a confirmed severe finding is one that breaks the task's goal, its done command, its allowed files, or a rule in the project's own docs. Fix confirmed severe findings automatically, without asking.
-- **Contradictions go to the orchestrator first.** When the judges contradict each other (one reports a severe defect that the other's evidence contradicts, or they disagree on the same location), decide it yourself: read the code at the cited location, check both judges' proofs, run the done command or a focused check. Rule by the plan and the evidence and record the ruling and why in the ledger: a real defect becomes confirmed (fix it), a false one is dropped. Escalate to the user **only** if the evidence does not settle it, stating the question, both positions and what you checked. The scripts only launch the actors with the skill's own texts: `jd-judge-a` / `jd-judge-b` and the skill's judge prompt, verbatim (`real.sh` reads them at run time; if a source is missing the script stops, there is no fallback).
+- **Contradictions go to the orchestrator first.** When the judges contradict each other (one reports a severe defect that the other's evidence contradicts, or they disagree on the same location), decide it yourself: read the code at the cited location, check both judges' proofs, run the done command or a focused check. Rule by the plan and the evidence and record the ruling and why in the ledger: a real defect becomes confirmed (fix it), a false one is dropped. Escalate to the user **only** if the evidence does not settle it, stating the question, both positions and what you checked. The scripts only launch the actors with the skill's own texts: `jd-judge-a` / `jd-judge-b` and the skill's judge prompt, verbatim (`real.sh` reads them at run time: the installed ones first, the bundled clone only when one is missing, never a paraphrase).
 
 The moment a task's notification says it is done (exit 0), launch its two judges; **do not wait for the other tasks**. Each judge is its own background call, so each shows up in the background-task list:
 
@@ -121,7 +132,7 @@ When every task is judged, for each one read `git -C <worktree> diff` and `git s
 1. Commit the task's branch from its worktree (Conventional Commit message).
 2. Merge it into the target branch with `git merge --no-ff track/<task>`, one branch at a time.
 3. On a conflict, read both sides, keep the intent of both, and resolve it yourself; never pick a side blindly.
-4. After the last merge, rerun the done command of **every** task on the merged result (a clean merge can still break another task), then review the total diff with the real ponytail review skill (Skill tool, `ponytail:ponytail-review`). If it cannot be loaded, stop and tell the user; do not improvise a review.
+4. After the last merge, rerun the done command of **every** task on the merged result (a clean merge can still break another task), then review the total diff with the real ponytail review skill (Skill tool, `ponytail:ponytail-review`). If it cannot be loaded, use the bundled clone of ponytail-review and tell the user; never improvise a review of your own.
 
 ## Phase 6 - Final report (a cheap model, a tiny context)
 
